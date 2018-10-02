@@ -2,6 +2,7 @@ const YTSearch = require('youtube-api-search');
 
 const { mysql } = require('../config/dbConnection');
 const Feed = require('../models/feed');
+const Push = require('../models/push');
 const { API_KEY } = require('../config/constants')
 
 module.exports = {
@@ -9,18 +10,14 @@ module.exports = {
 }
 
 function addUserFeed(req, res, next) {
-    try {
 
-    } catch (error) {
+    mysql.query('SELECT uuid, createTimestamp, simCountry FROM Installation where simCountry LIKE ?', ['sv'], (err, result) => {
 
-    }
-
-    mysql.query('SELECT uuid, createTimestamp, simCountry FROM Installation where uuid = ?', ['00001209-6eac-4c4a-b930-b02da785a6a7'], (err, result) => {
         //to convert into an final array
         result = JSON.stringify(result);
         result = JSON.parse(result);
 
-        result.forEach(element => {
+        result.forEach((element, index) => {
             var feed = new Feed();
             YTSearch({
                 key: API_KEY,
@@ -30,20 +27,49 @@ function addUserFeed(req, res, next) {
                 feed.uuid = element.uuid;
                 feed.createTimestamp = element.createTimestamp;
                 feed.simCountry = element.simCountry;
-                feed.recommended = videos;
+
+                var recommended = videos.map((video) => {
+                    return {
+                        siteId: 'Youtube',
+                        videoId: video.id.videoId,
+                        title: video.snippet.title,
+                        thumbnail: video.snippet.thumbnail,
+                        subTitle: video.snippet.description
+                    }
+                })
+                feed.recommended = recommended;
 
                 feed.save(err => {
                     if (err) {
                         console.log(err);
                         return;
                     }
-                    res.send(`uuid: ${element.uuid} saved to database`)
                 })
             });
+            if (result.length == index) {
+                res.send(`Saved to database`);
+            }
         });
     })
+
 }
 
-function push() {
-    
+async function push() {
+    Feed.find({}, (err, docs) => {
+        if (err) {
+            console.log(err);
+            return
+        }
+        docs.forEach((doc, index) => {
+            doc.recommended.forEach((video, i) => {
+                Push.findOne({ push: { videoId: video.videoId } }, (error, pushDoc) => {
+                    if (pushDoc.length) {
+                        // push api
+                        // save to push model
+                        break;
+                    }
+                })
+            })
+        })
+    })
 }

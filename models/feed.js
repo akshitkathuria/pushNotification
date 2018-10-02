@@ -6,11 +6,11 @@ var FeedSchema = new mongooose.Schema({
     createTimestamp: String,
     simCountry: String,
     recommended: [{
-        siteId: String,
+        /* siteId: String,
         videoId: String,
         title: String,
         thumbnail: String,
-        subtitle: String
+        subtitle: String */
     }]
 })
 
